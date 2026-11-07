@@ -10,11 +10,14 @@ const links = [
 ---
 
 <footer class="border-t border-border">
-  <div class="wrap flex flex-col gap-3 py-8 text-sm text-muted sm:flex-row sm:items-center sm:justify-between">
+  <div
+    class="wrap flex flex-col items-center gap-4 py-8 text-center text-sm text-muted sm:flex-row sm:justify-between sm:gap-3 sm:text-left"
+  >
     <p>
-      {site.name} · {site.award}, <span translate="no">{site.event}</span>
+      <span class="inline-block">{site.name} ·</span>{' '}
+      <span class="inline-block">{site.award}, <span translate="no">{site.event}</span></span>
     </p>
-    <ul class="flex flex-wrap gap-x-6 gap-y-2">
+    <ul class="flex flex-wrap justify-center gap-x-6 gap-y-2">
       {
         links.map((l) => (
           <li>
