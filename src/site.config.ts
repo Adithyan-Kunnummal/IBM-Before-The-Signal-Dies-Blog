@@ -27,6 +27,6 @@ export const nav = [
   { href: '/#how-it-works', label: 'How It Works' },
   { href: '/#results', label: 'Results' },
   { href: '/#linuxone', label: 'LinuxONE' },
-  { href: '/#team', label: 'Team', wide: true },
+  { href: '/#team', label: 'Team' },
   { href: '/story', label: 'Full Story' },
 ];
