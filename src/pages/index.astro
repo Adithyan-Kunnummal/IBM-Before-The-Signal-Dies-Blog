@@ -1,0 +1,527 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import AwardBadge from '../components/AwardBadge.astro';
+import PipelineDiagram from '../components/PipelineDiagram.astro';
+import ScenarioChart from '../components/ScenarioChart.astro';
+import Arrow from '../components/Arrow.astro';
+import { site } from '../site.config';
+import { scenarios, models, benchmark, sources, n } from '../data/project';
+
+const stats = [
+  { value: '1,699', label: 'WA localities rated Low, Medium or High' },
+  { value: '783', label: 'localities (82,523 residents) with no Optus site within 10 km, before any disaster' },
+  { value: '3.07×', label: 'better than random at ranking held-out reported outages (XGBoost)' },
+  { value: '3', label: 'inference engines on LinuxONE, including the Telum on-chip AI accelerator' },
+];
+
+const steps = [
+  {
+    title: 'Combine open data',
+    body: 'Optus mobile sites, 2021 Census population and bushfire, flood and cyclone history, joined for all 1,699 WA localities.',
+  },
+  {
+    title: 'Rate every locality',
+    body: 'A transparent index weighs hazard exposure equally against how thin the local Optus network is, then bands each locality Low, Medium or High.',
+  },
+  {
+    title: 'Run a disaster',
+    body: 'Draw a scenario on a live map. Sites inside it fail, coverage is re-checked, and the affected localities are re-banded live.',
+  },
+  {
+    title: 'Place portable units',
+    body: 'Temporary cell units are placed one at a time wherever each reconnects the most residents.',
+  },
+];
+
+const hazard = ['Bushfire-prone area %', 'Mapped floodplain %', 'Recorded bushfires per year', 'Nearby cyclone tracks'];
+const sparsity = [
+  'Distance to nearest Optus site (further is worse)',
+  'Optus sites within 5 km (fewer is worse)',
+  'Optus sites within 10 km (fewer is worse)',
+];
+
+const limitations = [
+  'Bands are relative rankings, not outage probabilities or forecasts.',
+  'The outage register is a selected set of reported incidents. No report is not evidence of normal service, and reporting favours populated areas.',
+  'One storm accounts for 90 of the 114 reported localities, so there are few independent incidents. Final-model scores for reported localities are in-sample.',
+  'Site IDs are not necessarily unique physical towers, and there are no per-site coverage footprints, so “covered” uses an assumed radius from one point per locality.',
+  'A floodplain value of 0 can mean unmapped, and fire history is incomplete statewide.',
+  'No rainfall, local wind or live hazard data. The preset scenarios are illustrative, not reconstructions of real events.',
+  'Index weights were chosen by the team, not fitted.',
+];
+
+const audiences = [
+  { who: 'Emergency agencies', what: 'Pre-position portable units and plan warnings before fire season.' },
+  { who: 'Telecommunications providers', what: 'Find single-site communities and prioritise backup power and redundancy.' },
+  { who: 'Local governments and community groups', what: 'Prepare alternatives such as satellite phones and radio in advance.' },
+  { who: 'Remote communities', what: 'The people most likely to lose contact, and least likely to appear in outage data.' },
+];
+---
+
+<BaseLayout>
+  <!-- Hero -->
+  <section
+    aria-labelledby="intro"
+    class="grid items-center gap-12 lg:min-h-[min(calc(100svh-12rem),46rem)] lg:grid-cols-[minmax(0,1fr)_minmax(0,25rem)] lg:gap-16"
+  >
+    <div>
+      <AwardBadge award={site.award} event={`${site.event}, Australia`} />
+      <h1 id="intro" class="mt-6 tracking-tight">
+        <span class="block text-5xl font-semibold sm:text-6xl">{site.name}</span>
+        <span class="mt-4 block max-w-[24ch] text-2xl font-medium text-muted sm:text-3xl">
+          Which WA communities lose mobile coverage first in a disaster
+        </span>
+      </h1>
+      <p class="mt-6 max-w-[58ch] text-lg">
+        A disaster-communications planning tool for Western Australia. It rates every locality by how likely it is to
+        lose mobile coverage, simulates outages on a live map, and shows where portable cell units would reconnect the
+        most people. Built from scratch and running on <span translate="no">IBM LinuxONE</span>.
+      </p>
+      <div class="mt-8 flex flex-col gap-3 sm:flex-row">
+        {
+          site.video ? (
+            <a href={site.video} class="btn btn--primary">
+              <svg viewBox="0 0 16 16" class="h-4 w-4" aria-hidden="true" fill="currentColor">
+                <path d="M4.5 2.8v10.4a.6.6 0 0 0 .9.5l8.2-5.2a.6.6 0 0 0 0-1L5.4 2.3a.6.6 0 0 0-.9.5z" />
+              </svg>
+              Watch the Video Pitch
+            </a>
+          ) : (
+            <a href="#how-it-works" class="btn btn--primary">See How It Works <Arrow /></a>
+          )
+        }
+        {
+          site.repo && (
+            <a href={site.repo} class="btn btn--secondary">
+              <svg viewBox="0 0 16 16" class="h-4 w-4" aria-hidden="true" fill="currentColor">
+                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+              </svg>
+              View the Code on GitHub
+            </a>
+          )
+        }
+      </div>
+    </div>
+
+    <div class="card group p-5 sm:p-6">
+      <p class="label">How it fits together</p>
+      <PipelineDiagram class="mt-5" />
+    </div>
+  </section>
+
+  <!-- Key numbers -->
+  <section aria-label="Key numbers" class="mt-16 lg:mt-8">
+    <dl class="grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
+      {
+        stats.map((s) => (
+          <div class="flex flex-col bg-surface p-5 sm:p-6">
+            <dt class="text-sm text-muted">{s.label}</dt>
+            <dd class="order-first mb-2 text-3xl font-semibold tracking-tight tabular-nums">{s.value}</dd>
+          </div>
+        ))
+      }
+    </dl>
+  </section>
+
+  <!-- Problem -->
+  <section id="problem" aria-labelledby="problem-h" class="section">
+    <div class="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-16">
+      <div>
+        <p class="label">The problem</p>
+        <h2 id="problem-h" class="section-title">Planners find out who went silent after the outage</h2>
+        <blockquote class="mt-8 border-l-[3px] border-accent pl-5 text-2xl leading-snug font-medium tracking-tight">
+          Outage reports come from towns that still have signal.
+        </blockquote>
+      </div>
+      <div class="space-y-5 text-lg lg:pt-9">
+        <p>
+          When bushfires, storms or cyclones take out mobile towers, communities lose the ability to call for help,
+          receive warnings and coordinate evacuations. The hardest hit are often remote communities served by a single
+          site with no backup.
+        </p>
+        <p>
+          There is no simple, statewide view in advance of who is exposed, how many people would be cut off, or where a
+          few portable units would do the most good.
+        </p>
+        <p>
+          <strong>The core insight:</strong> outage reports come mostly from busy, well-connected towns where people
+          notice and report. The remote communities most at risk barely appear in the record. A tool that only learns
+          from past reports would overlook the people who most need help, so our planning bands come from a transparent
+          index, not from a model trained on reports.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section id="how-it-works" aria-labelledby="how-h" class="section">
+    <p class="label">How it works</p>
+    <h2 id="how-h" class="section-title">Who’s exposed, how many people, where help goes first</h2>
+    <ol class="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+      {
+        steps.map((s, i) => (
+          <li class="card flex flex-col p-5 sm:p-6">
+            <span class="font-mono text-sm text-accent">0{i + 1}</span>
+            <h3 class="mt-3 text-lg font-semibold tracking-tight">{s.title}</h3>
+            <p class="mt-2 text-muted">{s.body}</p>
+          </li>
+        ))
+      }
+    </ol>
+
+    <div class="mt-16 grid gap-10 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:gap-16">
+      <div>
+        <h3 class="text-2xl font-semibold tracking-tight">The susceptibility index</h3>
+        <p class="mt-4 text-muted">
+          Each feature is scaled 0 to 1. Each half is averaged, then converted to a WA-wide percentile before weighting,
+          because without that the nominal 50/50 split wasn’t truly equal: the two halves spread differently.
+        </p>
+        <p class="mt-4 text-muted">
+          Every locality also gets a plain-English explanation of its main factors, built only from measured facts.
+        </p>
+      </div>
+      <div class="grid gap-5">
+        <div class="grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2">
+          <div class="bg-surface p-5 sm:p-6">
+            <h4 class="font-semibold">Hazard exposure <span class="font-normal text-muted">· weight 0.5</span></h4>
+            <ul class="mt-3 space-y-1.5 text-[15px] text-muted">{hazard.map((h) => <li>{h}</li>)}</ul>
+          </div>
+          <div class="bg-surface p-5 sm:p-6">
+            <h4 class="font-semibold">Network sparsity <span class="font-normal text-muted">· weight 0.5</span></h4>
+            <ul class="mt-3 space-y-1.5 text-[15px] text-muted">{sparsity.map((h) => <li>{h}</li>)}</ul>
+          </div>
+        </div>
+        <div class="card p-5 sm:p-6">
+          <h4 class="font-semibold">Bands are relative ranks</h4>
+          <div class="mt-4 flex h-3 gap-[2px] overflow-hidden rounded-full" aria-hidden="true">
+            <span class="w-[20%] bg-accent"></span>
+            <span class="w-[30%] bg-accent/55"></span>
+            <span class="w-[50%] bg-accent/20"></span>
+          </div>
+          <ul class="mt-3 grid gap-1 text-[15px] sm:grid-cols-3">
+            <li><strong>High</strong> <span class="text-muted">· top 20%, 339 localities</span></li>
+            <li><strong>Medium</strong> <span class="text-muted">· next 30%, 510</span></li>
+            <li><strong>Low</strong> <span class="text-muted">· remaining 50%, 850</span></li>
+          </ul>
+          <p class="mt-4 text-[15px] text-muted">
+            Sensitivity: shifting the weights to 40/60 changes 186 localities’ band (11%), and 60/40 changes 168 (10%).
+            1,347 localities keep their band either way.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Results -->
+  <section id="results" aria-labelledby="results-h" class="section">
+    <p class="label">Scenario results</p>
+    <h2 id="results-h" class="section-title">Two portable units reconnect most of the people cut off</h2>
+    <p class="mt-4 max-w-[64ch] text-lg text-muted">
+      Four preset scenarios, with a 10 km coverage radius, 2 units and a 15 km unit range. The scenarios are
+      illustrative, not reconstructions of real events.
+    </p>
+
+    <div class="card mt-10 p-5 sm:p-7">
+      <ScenarioChart />
+    </div>
+
+    <div class="mt-6 overflow-x-auto rounded-2xl border border-border">
+      <table class="w-full min-w-[46rem] text-left text-[15px]">
+        <caption class="sr-only">Preset scenario results</caption>
+        <thead class="bg-surface text-sm text-muted">
+          <tr>
+            <th scope="col" class="px-4 py-3 font-medium">Scenario</th>
+            <th scope="col" class="px-4 py-3 font-medium">Area</th>
+            <th scope="col" class="px-4 py-3 text-right font-medium">Sites failed</th>
+            <th scope="col" class="px-4 py-3 text-right font-medium">Localities losing coverage</th>
+            <th scope="col" class="px-4 py-3 text-right font-medium">Residents affected</th>
+            <th scope="col" class="px-4 py-3 font-medium">Bands raised</th>
+            <th scope="col" class="px-4 py-3 font-medium">Units restore</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-border tabular-nums">
+          {
+            scenarios.map((s) => (
+              <tr>
+                <th scope="row" class="px-4 py-3 font-medium">{s.name}</th>
+                <td class="px-4 py-3 text-muted">{s.area}</td>
+                <td class="px-4 py-3 text-right">{s.sitesFailed}</td>
+                <td class="px-4 py-3 text-right">{s.localitiesLost}</td>
+                <td class="px-4 py-3 text-right">{n(s.affected)}</td>
+                <td class="px-4 py-3 text-muted">{s.bandsRaised}</td>
+                <td class="px-4 py-3 text-muted">
+                  {n(s.restored)} residents, {s.restoredLocalities} localities ({s.note})
+                </td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+    </div>
+    <p class="mt-4 text-[15px] text-muted">
+      Hazard is unchanged during a scenario, so bands can only rise. Before any disaster, 783 localities (82,523
+      residents) already have no Optus site within 10 km of their representative point.
+    </p>
+  </section>
+
+  <!-- Model -->
+  <section id="model" aria-labelledby="model-h" class="section">
+    <div class="grid gap-10 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:gap-16">
+      <div>
+        <p class="label">The model</p>
+        <h2 id="model-h" class="section-title">A second, learned view of where outages get reported</h2>
+        <p class="mt-4 text-muted">
+          An XGBoost model trained on Optus’s outage register, framed as positive–unlabelled learning: 114 localities
+          with a reported outage, 1,585 unknown, and no confirmed negatives.
+        </p>
+      </div>
+      <div class="min-w-0 space-y-5">
+        <p class="text-lg">
+          Random row splits would leak, because reports share incidents: one storm accounts for 90 of the 114 positives.
+          So we grouped reports into 19 independent incidents and tested on a storm hold-out and leave-one-incident-out,
+          against a comparison set of unlabelled localities chosen by 1° grid cell and never trained on, over 5 seeds.
+        </p>
+        <div class="overflow-x-auto rounded-2xl border border-border">
+          <table class="w-full min-w-[34rem] text-left text-[15px]">
+            <caption class="sr-only">
+              Model comparison: mean percentile of held-out reported localities / share captured in the top 20%
+            </caption>
+            <thead class="bg-surface text-sm text-muted">
+              <tr>
+                <th scope="col" class="px-4 py-3 font-medium">Approach</th>
+                <th scope="col" class="px-4 py-3 font-medium">Storm hold-out</th>
+                <th scope="col" class="px-4 py-3 font-medium">Leave-one-incident-out</th>
+                <th scope="col" class="px-4 py-3 font-medium">All 114</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border tabular-nums">
+              {
+                models.map((m) => (
+                  <tr class:list={[{ 'bg-accent-soft': m.final }]}>
+                    <th scope="row" class:list={['px-4 py-3', m.final ? 'font-semibold' : 'font-medium']}>
+                      {m.name}
+                    </th>
+                    <td class="px-4 py-3">{m.storm}</td>
+                    <td class="px-4 py-3">{m.loio}</td>
+                    <td class="px-4 py-3">{m.all}</td>
+                  </tr>
+                ))
+              }
+            </tbody>
+          </table>
+        </div>
+        <p class="text-[15px] text-muted">
+          Mean percentile of held-out reported localities within the comparison set / share in its top 20% (random =
+          20%). Not accuracy, because the comparison set may contain unreported outages.
+        </p>
+        <p class="text-lg">
+          The strongest drivers are site density and distance to the nearest site: nearer sites mean <em>more</em>
+          reports. The model learns where outages get <em>reported</em>, which is useful context but a different
+          question from susceptibility. That’s why the index sets the planning bands and the model is shown alongside
+          it. Checked against the register, the index scores an AUC of 0.418 overall, 0.298 in the least populated third
+          and 0.627 in the most populated: reports concentrate exactly where the index doesn’t prioritise.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- LinuxONE -->
+  <section id="linuxone" aria-labelledby="l1-h" class="section">
+    <p class="label">Built on IBM LinuxONE</p>
+    <h2 id="l1-h" class="section-title">One model, three engines, matching answers</h2>
+    <p class="mt-4 max-w-[64ch] text-lg text-muted">
+      Trained natively on an <span translate="no">IBM LinuxONE</span> Community Cloud VM (z17, Telum II, s390x).
+      The app runs the same model on XGBoost, IBM Snap ML on the CPU and IBM Snap ML on the Telum Integrated Accelerator
+      for AI. Every engine is checked at start-up and agrees with XGBoost to within 1.45 × 10⁻⁷.
+    </p>
+
+    <div class="mt-10 grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+      <div class="card min-w-0 p-5 sm:p-6">
+        <h3 class="font-semibold">Measured inference, median ms per batch</h3>
+        <div class="mt-4 overflow-x-auto">
+          <table class="w-full min-w-[28rem] text-right text-[15px] tabular-nums">
+            <thead class="text-sm text-muted">
+              <tr class="border-b border-border">
+                <th scope="col" class="py-2 pr-4 text-left font-medium">Rows</th>
+                <th scope="col" class="px-4 py-2 font-medium">Snap ML (CPU)</th>
+                <th scope="col" class="px-4 py-2 font-medium">XGBoost (CPU)</th>
+                <th scope="col" class="py-2 pl-4 font-medium">Snap ML (Telum)</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border">
+              {
+                benchmark.map((b) => (
+                  <tr>
+                    <th scope="row" class="py-2.5 pr-4 text-left font-medium">{n(b.rows)}</th>
+                    <td class="px-4 py-2.5">{n(b.snapCpu)}</td>
+                    <td class="px-4 py-2.5">{n(b.xgb)}</td>
+                    <td class="py-2.5 pl-4">{n(b.telum)}</td>
+                  </tr>
+                ))
+              }
+            </tbody>
+          </table>
+        </div>
+        <p class="mt-4 text-[15px] text-muted">
+          We measured the accelerator rather than assume it helps. Snap ML on the CPU is about 2× faster than XGBoost at
+          every size. For this deliberately small model (150 trees of depth 2), Telum is slower than the cores, at about
+          3.9 µs per row against 0.6 µs. It returns matching scores and moves inference off the general-purpose cores;
+          larger tree ensembles are where the accelerator is designed to pay off.
+        </p>
+      </div>
+      <div class="flex flex-col gap-5">
+        <div class="card p-5 sm:p-6">
+          <h3 class="font-semibold">Hardened container</h3>
+          <p class="mt-2 text-[15px] text-muted">
+            Multi-stage Ubuntu 24.04 image built natively on s390x. Non-root user, read-only file system, all Linux
+            capabilities dropped, no privilege escalation, memory and process limits, and a health check. Telum works
+            inside the container with no extra privileges, because NNPA is a CPU instruction. Stateless requests and
+            read-only data mean it scales horizontally.
+          </p>
+        </div>
+        <div class="card p-5 sm:p-6">
+          <h3 class="font-semibold">Getting Telum working</h3>
+          <ul class="mt-2 list-disc space-y-1.5 pl-5 text-[15px] text-muted marker:text-border-strong">
+            <li>
+              No scikit-learn or SciPy wheels exist for s390x, so the container compiles them. The first build took
+              about 25 minutes.
+            </li>
+            <li>Snap ML fell back to CPU-only until IBM’s zDNN library was installed.</li>
+            <li>
+              Snap ML 1.17 couldn’t read XGBoost 3’s JSON layout, so the app writes a temporary copy in the XGBoost 2
+              layout. Predictions are unchanged.
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Data -->
+  <section id="data" aria-labelledby="data-h" class="section">
+    <div class="grid gap-10 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:gap-16">
+      <div>
+        <p class="label">The data</p>
+        <h2 id="data-h" class="section-title">Open data, carefully cleaned</h2>
+        <p class="mt-4 text-muted">
+          The unit of analysis is the ABS 2021 Suburbs and Localities: 1,699 spatial localities in WA, served by 943
+          unique Optus site IDs.
+        </p>
+        <p class="mt-4 text-muted">
+          287 raw outage records became 37 WA-only mobile reports. Towns were matched to localities by exact normalised
+          name only, with no fuzzy guessing, giving 114 localities with a reported outage. Hazard history for the model
+          ends before the outage window, and outage causes, durations and report IDs are never model inputs, to avoid
+          leakage.
+        </p>
+      </div>
+      <ul class="grid content-start gap-px overflow-hidden rounded-2xl border border-border bg-border">
+        {
+          sources.map((s) => (
+            <li class="flex flex-col gap-1 bg-surface p-4 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6 sm:px-6">
+              <span class="font-medium">
+                {s.url ? (
+                  <a href={s.url} class="link">
+                    {s.name}
+                  </a>
+                ) : (
+                  s.name
+                )}
+              </span>
+              <span class="text-sm text-muted sm:text-right">
+                {s.detail}
+              </span>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <!-- Limitations and audience -->
+  <section id="limitations" aria-labelledby="lim-h" class="section">
+    <div class="grid gap-12 lg:grid-cols-2 lg:gap-16">
+      <div>
+        <p class="label">Limitations</p>
+        <h2 id="lim-h" class="section-title">What the results can’t tell you</h2>
+        <ul class="mt-8 space-y-3">
+          {
+            limitations.map((l) => (
+              <li class="flex gap-3">
+                <span class="mt-2.5 h-1.5 w-1.5 flex-none rounded-full bg-border-strong" aria-hidden="true" />
+                <span>{l}</span>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+      <div>
+        <p class="label">Who it could help</p>
+        <h2 class="section-title">Planning before the emergency</h2>
+        <ul class="mt-8 grid gap-4">
+          {
+            audiences.map((a) => (
+              <li class="card p-5">
+                <h3 class="font-semibold">{a.who}</h3>
+                <p class="mt-1 text-[15px] text-muted">{a.what}</p>
+              </li>
+            ))
+          }
+        </ul>
+        <p class="mt-4 text-[15px] text-muted">
+          These are possible uses: the tool has not yet been shown to an emergency agency. It uses only open data and
+          free tools.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Team -->
+  <section id="team" aria-labelledby="team-h" class="section">
+    <p class="label">The team</p>
+    <h2 id="team-h" class="section-title">Built from scratch by four people in 24 hours</h2>
+    <ul class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {
+        site.team.map(({ name }) => (
+          <li class="card flex items-center gap-4 p-5">
+            <span
+              class="grid h-11 w-11 flex-none place-items-center rounded-full bg-accent-soft font-mono text-sm font-medium text-accent"
+              aria-hidden="true"
+            >
+              {name
+                .split(/\s+/)
+                .map((w) => w[0])
+                .slice(0, 2)
+                .join('')}
+            </span>
+            <span class="font-medium" translate="no">
+              {name}
+            </span>
+          </li>
+        ))
+      }
+    </ul>
+    <p class="mt-8 max-w-[68ch] text-muted">
+      Built in 24 hours at the <span translate="no">{site.event}</span>, held on {site.date} at {site.venue}.
+      The event was organised by the Shooting Stars Foundation and judged by <span translate="no">IBM</span>
+      subject-matter experts. It placed 2nd.
+    </p>
+  </section>
+
+  <!-- Close -->
+  <section aria-labelledby="story-h" class="section">
+    <div class="card group flex flex-col gap-6 p-6 sm:p-10 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <h2 id="story-h" class="text-2xl font-semibold tracking-tight sm:text-3xl">The full story</h2>
+        <p class="mt-3 max-w-[56ch] text-lg text-muted">
+          The reporting-bias problem, the overfitting we caught, getting Telum working, and what we learned along the
+          way.
+        </p>
+      </div>
+      <div class="flex flex-none flex-col gap-3 sm:flex-row">
+        <a href="/story" class="btn btn--primary">Read the Full Story <Arrow /></a>
+        {site.video && <a href={site.video} class="btn btn--secondary">Watch the Video</a>}
+        {site.repo && <a href={site.repo} class="btn btn--secondary">View the Code</a>}
+      </div>
+    </div>
+  </section>
+</BaseLayout>

@@ -1,0 +1,16 @@
+---
+interface Props {
+  award: string;
+  event?: string;
+}
+const { award, event } = Astro.props;
+---
+
+<p
+  class="inline-flex w-fit items-center gap-1.5 rounded-full border border-accent/30 bg-accent-soft px-3 py-1 text-sm font-medium text-accent"
+>
+  <svg viewBox="0 0 16 16" class="h-3.5 w-3.5 flex-none" aria-hidden="true" fill="currentColor">
+    <path d="M8 1.2l1.9 4 4.4.5-3.3 3 .9 4.3L8 10.8 4.1 13l.9-4.3-3.3-3 4.4-.5z"></path>
+  </svg>
+  <span>{award}{event && <span class="font-normal"> · <span translate="no">{event}</span></span>}</span>
+</p>

@@ -1,0 +1,29 @@
+---
+import { site } from '../site.config';
+
+const links = [
+  { label: 'Full Story', href: '/story' },
+  site.video && { label: 'Video', href: site.video },
+  site.repo && { label: 'Code', href: site.repo },
+  site.slides && { label: 'Slides', href: site.slides },
+].filter(Boolean) as { label: string; href: string }[];
+---
+
+<footer class="border-t border-border">
+  <div class="wrap flex flex-col gap-3 py-8 text-sm text-muted sm:flex-row sm:items-center sm:justify-between">
+    <p>
+      {site.name} · {site.award}, <span translate="no">{site.event}</span>
+    </p>
+    <ul class="flex flex-wrap gap-x-6 gap-y-2">
+      {
+        links.map((l) => (
+          <li>
+            <a href={l.href} class="nav-link">
+              {l.label}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</footer>

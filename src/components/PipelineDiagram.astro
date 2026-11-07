@@ -1,0 +1,144 @@
+---
+// Still diagram of how Before the Signal Dies fits together. Every box is built.
+// A short pulse runs along the lines once on load and loops while the parent
+// `.group` is hovered or focused. Under reduced motion it stays still.
+interface Props {
+  class?: string;
+}
+const { class: className = '' } = Astro.props;
+
+const sources = [
+  { x: 0, a: 'Optus sites', b: 'ACCC, 943 site IDs' },
+  { x: 124, a: 'Population', b: 'ABS 2021 Census' },
+  { x: 248, a: 'Hazard history', b: 'fire, flood, cyclone' },
+];
+const flows = [
+  'M55 62 V86 Q55 96 65 96 H160 Q170 96 170 106 V116',
+  'M180 62 V116',
+  'M305 62 V86 Q305 96 295 96 H200 Q190 96 190 106 V116',
+  'M180 167 V183 H87 V198',
+  'M180 167 V183 H273 V198',
+  'M87 253 V269 H180 V284',
+  'M180 335 V366',
+];
+const delays = [0, 0, 0, 0.5, 0.5, 0.9, 1.3];
+
+const boxes = [
+  { x: 40, y: 117, w: 280, h: 50, a: '1,699 WA localities', b: 'ABS suburbs and localities' },
+  { x: 1, y: 199, w: 172, h: 54, a: 'Susceptibility index', b: 'Low, Medium, High bands', core: true },
+  { x: 187, y: 199, w: 172, h: 54, a: 'XGBoost model', b: 'a second, learned view' },
+  { x: 40, y: 285, w: 280, h: 50, a: 'Disaster scenario', b: 'sites fail, coverage re-checked' },
+  { x: 40, y: 367, w: 280, h: 50, a: 'Portable unit placement', b: 'where units reconnect the most people' },
+];
+---
+
+<svg viewBox="0 0 360 452" class={`pipeline ${className}`} role="img" aria-labelledby="pipeline-title pipeline-desc">
+  <title id="pipeline-title">How Before the Signal Dies fits together</title>
+  <desc id="pipeline-desc">
+    Optus mobile site records from the ACCC, ABS 2021 population and fire, flood and cyclone history are combined for all
+    1,699 Western Australian localities. A transparent susceptibility index rates each locality Low, Medium or High,
+    and an XGBoost model adds a second, learned view. A disaster scenario fails sites and re-checks coverage, then
+    portable cell units are placed where they reconnect the most people. Everything runs on IBM LinuxONE.
+  </desc>
+
+  {
+    sources.map((s) => (
+      <g>
+        <rect class="box" x={s.x + 1} y="1" width="110" height="60" rx="10" />
+        <text class="t-a" x={s.x + 56} y="27" text-anchor="middle">
+          {s.a}
+        </text>
+        <text class="t-b" x={s.x + 56} y="45" text-anchor="middle">
+          {s.b}
+        </text>
+      </g>
+    ))
+  }
+
+  <g class="lines">{flows.map((d) => <path d={d} />)}</g>
+  <g class="pulses" aria-hidden="true">
+    {flows.map((d, i) => <path d={d} pathLength="1" style={`--d:${delays[i]}s`} />)}
+  </g>
+
+  {
+    boxes.map((b) => (
+      <g>
+        <rect class:list={['box', { 'box--core': b.core }]} x={b.x} y={b.y} width={b.w} height={b.h} rx="10" />
+        <text class="t-a" x={b.x + b.w / 2} y={b.y + b.h / 2 - 3} text-anchor="middle">
+          {b.a}
+        </text>
+        <text class="t-b" x={b.x + b.w / 2} y={b.y + b.h / 2 + 14} text-anchor="middle">
+          {b.b}
+        </text>
+      </g>
+    ))
+  }
+
+  <text class="t-plat" x="180" y="447" text-anchor="middle">Runs on IBM LinuxONE · z17, Telum II</text>
+</svg>
+
+<style>
+  .pipeline {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+    font-family: var(--font-sans);
+  }
+  .box {
+    fill: var(--surface);
+    stroke: var(--border-strong);
+    stroke-width: 1;
+  }
+  .box--core {
+    fill: var(--accent-soft);
+    stroke: var(--accent);
+  }
+  .t-a {
+    fill: var(--text);
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+  .t-b {
+    fill: var(--muted);
+    font-size: 11px;
+  }
+  .t-plat {
+    fill: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+  }
+  .lines path {
+    fill: none;
+    stroke: var(--border-strong);
+    stroke-width: 1.25;
+  }
+  .pulses path {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-dasharray: 0.14 1;
+    stroke-dashoffset: 0.14;
+    opacity: 0;
+    animation: pulse 2.2s linear var(--d) 1;
+  }
+  :global(.group:hover) .pulses path,
+  :global(.group:focus-within) .pulses path {
+    animation: pulse 3.2s linear var(--d) infinite;
+  }
+  @keyframes pulse {
+    0% {
+      stroke-dashoffset: 0.14;
+      opacity: 1;
+    }
+    70% {
+      stroke-dashoffset: -1;
+      opacity: 1;
+    }
+    71%,
+    100% {
+      stroke-dashoffset: -1;
+      opacity: 0;
+    }
+  }
+</style>

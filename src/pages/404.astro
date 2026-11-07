@@ -1,0 +1,16 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SignalMark from '../components/SignalMark.astro';
+---
+
+<BaseLayout title="Page Not Found" description="This page doesn’t exist.">
+  <div class="max-w-xl py-10">
+    <SignalMark level={0} class="h-10 w-10 text-muted" />
+    <h1 class="mt-6 text-4xl font-semibold tracking-tight sm:text-5xl">Page Not Found</h1>
+    <p class="mt-4 text-lg text-muted">This page doesn’t exist or has moved.</p>
+    <div class="mt-8 flex flex-col gap-3 sm:flex-row">
+      <a href="/" class="btn btn--primary">Go to the Home Page</a>
+      <a href="/story" class="btn btn--secondary">Read the Full Story</a>
+    </div>
+  </div>
+</BaseLayout>

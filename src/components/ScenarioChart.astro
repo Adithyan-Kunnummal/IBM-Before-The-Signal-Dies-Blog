@@ -1,0 +1,191 @@
+---
+// Residents who lose coverage in each preset scenario vs residents reconnected
+// by two portable units. Paired horizontal bars, one shared axis, direct labels.
+// Palette validated with the dataviz skill's validator (light and dark).
+import { scenarios, n } from '../data/project';
+
+const max = 30000;
+const ticks = [0, 10000, 20000, 30000];
+const pct = (v: number) => `${(v / max) * 100}%`;
+---
+
+<figure class="chart" aria-labelledby="chart-title">
+  <div class="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-3">
+    <h3 id="chart-title" class="font-semibold">Residents cut off, and reconnected by two units</h3>
+    <ul class="flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted" aria-label="Legend">
+      <li class="flex items-center gap-2"><span class="swatch swatch--lost" aria-hidden="true"></span>Lose coverage</li>
+      <li class="flex items-center gap-2">
+        <span class="swatch swatch--restored" aria-hidden="true"></span>Reconnected by units
+      </li>
+    </ul>
+  </div>
+
+  <div class="plot mt-6" aria-hidden="true">
+    <div class="grid-lines">
+      {ticks.map((t) => <span style={`left:${pct(t)}`} />)}
+    </div>
+    {
+      scenarios.map((s) => (
+        <div class="row">
+          <p class="row-label">{s.name}</p>
+          <div class="bars">
+            <div class="bar-line" title={`${s.name}: ${n(s.affected)} residents lose coverage`}>
+              <span class="bar bar--lost" style={`width:${pct(s.affected)}`} />
+              <span class="value">{n(s.affected)}</span>
+            </div>
+            <div class="bar-line" title={`${s.name}: ${n(s.restored)} residents reconnected by two units`}>
+              <span class="bar bar--restored" style={`width:${pct(s.restored)}`} />
+              <span class="value">{n(s.restored)}</span>
+            </div>
+          </div>
+        </div>
+      ))
+    }
+    <div class="axis">
+      {
+        ticks.map((t) => (
+          <span style={`left:${pct(t)}`} class:list={[{ first: t === 0, last: t === max }]}>
+            {n(t)}
+          </span>
+        ))
+      }
+    </div>
+  </div>
+  <p class="sr-only">The same figures are listed in the scenario table below.</p>
+</figure>
+
+<style>
+  .chart {
+    --lost: #c4620f;
+    --restored: #00897a;
+  }
+  @media (prefers-color-scheme: dark) {
+    .chart {
+      --lost: #c9732a;
+      --restored: #2aa597;
+    }
+  }
+  .swatch {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 3px;
+    display: inline-block;
+  }
+  .swatch--lost {
+    background: var(--lost);
+  }
+  .swatch--restored {
+    background: var(--restored);
+  }
+  .plot {
+    position: relative;
+    padding-bottom: 1.75rem;
+  }
+  .grid-lines,
+  .axis {
+    position: absolute;
+    left: 0;
+    right: 4.5rem;
+  }
+  @media (width >= 40rem) {
+    .grid-lines,
+    .axis,
+    .bars {
+      margin-left: 11rem;
+    }
+    .grid-lines,
+    .axis {
+      left: 0;
+    }
+  }
+  .grid-lines {
+    top: 0;
+    bottom: 1.75rem;
+  }
+  .grid-lines span {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--border);
+  }
+  .axis {
+    bottom: 0;
+    height: 1.25rem;
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .axis span {
+    position: absolute;
+    transform: translateX(-50%);
+  }
+  .axis span.first {
+    transform: none;
+  }
+  .axis span.last {
+    transform: translateX(-100%);
+  }
+  .row {
+    position: relative;
+    display: grid;
+    gap: 0.375rem;
+    padding: 0.625rem 0;
+  }
+  @media (width >= 40rem) {
+    .row {
+      grid-template-columns: 11rem minmax(0, 1fr);
+      align-items: center;
+      gap: 0;
+    }
+    .row .bars {
+      margin-left: 0;
+    }
+  }
+  .row-label {
+    font-size: 0.9375rem;
+    color: var(--text);
+  }
+  .bars {
+    display: grid;
+    gap: 2px;
+    margin-right: 4.5rem;
+  }
+  .bar-line {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 14px;
+  }
+  .bar {
+    display: block;
+    flex: none;
+    height: 100%;
+    min-width: 2px;
+    border-radius: 0 4px 4px 0;
+    transition: opacity var(--m-out) var(--m-ease);
+  }
+  .bar--lost {
+    background: var(--lost);
+  }
+  .bar--restored {
+    background: var(--restored);
+  }
+  .value {
+    font-size: 0.8125rem;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  @media (pointer: fine) {
+    .plot:hover .bar {
+      opacity: 0.45;
+    }
+    .plot .bar-line:hover .bar {
+      opacity: 1;
+    }
+    .bar-line:hover .value {
+      color: var(--text);
+    }
+  }
+</style>

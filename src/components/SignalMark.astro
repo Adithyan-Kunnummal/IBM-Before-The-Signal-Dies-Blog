@@ -1,0 +1,26 @@
+---
+// Four signal-strength bars: the site's small network motif.
+// `level` = how many bars are lit (the rest stay faint).
+interface Props {
+  level?: 0 | 1 | 2 | 3 | 4;
+  class?: string;
+}
+const { level = 4, class: className = 'h-4 w-4' } = Astro.props;
+const bars = [0, 1, 2, 3];
+---
+
+<svg viewBox="0 0 16 16" class={className} aria-hidden="true" focusable="false">
+  {
+    bars.map((i) => (
+      <rect
+        x={1 + i * 4}
+        y={12 - i * 3.5}
+        width="2.6"
+        height={3 + i * 3.5}
+        rx="0.8"
+        fill="currentColor"
+        opacity={i < level ? 1 : 0.22}
+      />
+    ))
+  }
+</svg>

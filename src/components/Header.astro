@@ -1,0 +1,33 @@
+---
+import SignalMark from './SignalMark.astro';
+import { nav, site } from '../site.config';
+
+const path = Astro.url.pathname.replace(/\/$/, '') || '/';
+const isCurrent = (href: string) => !href.includes('#') && (path === href || path.startsWith(`${href}/`));
+---
+
+<header class="border-b border-border">
+  <div class="wrap flex flex-wrap items-center justify-between gap-x-6 py-2">
+    <a href="/" class="group -mx-1 inline-flex min-h-11 items-center gap-2 px-1 font-semibold tracking-tight">
+      <SignalMark class="h-4 w-4 text-accent" />
+      <span class="transition-colors group-hover:text-accent">{site.name}</span>
+    </a>
+    <nav aria-label="Main">
+      <ul class="flex flex-wrap items-center gap-x-5 text-[15px] whitespace-nowrap sm:gap-x-7">
+        {
+          nav.map((item) => (
+            <li class={'wide' in item && item.wide ? 'hidden sm:list-item' : undefined}>
+              <a
+                href={item.href}
+                aria-current={isCurrent(item.href) ? 'page' : undefined}
+                class="nav-link inline-flex min-h-11 items-center"
+              >
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+  </div>
+</header>

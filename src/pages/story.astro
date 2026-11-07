@@ -1,0 +1,49 @@
+---
+import { Image } from 'astro:assets';
+import { getEntry, render } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import AwardBadge from '../components/AwardBadge.astro';
+
+const story = await getEntry('story', 'before-the-signal-dies');
+if (!story) throw new Error('Missing src/content/story/before-the-signal-dies.md');
+const { Content } = await render(story);
+const { title, summary, award, event, date, updated, cover, coverAlt } = story.data;
+
+const words = (story.body ?? '').split(/\s+/).filter(Boolean).length;
+const readingTime = `${Math.max(1, Math.round(words / 230))} min read`;
+const fmt = (d: Date) =>
+  new Intl.DateTimeFormat('en-AU', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }).format(d);
+---
+
+<BaseLayout title="The Full Story" description={summary} type="article" publishedTime={date} image={cover?.src}>
+  <article class="mx-auto max-w-[57rem]">
+    <header>
+      {award && <AwardBadge award={award} event={event} />}
+      <h1 class="mt-5 text-4xl font-semibold tracking-tight sm:text-5xl">How we built {title}</h1>
+      <p class="mt-5 text-xl text-muted">{summary}</p>
+      <p class="mt-5 text-sm text-muted">
+        <time datetime={date.toISOString()}>{fmt(date)}</time>
+        {updated && <> · Updated <time datetime={updated.toISOString()}>{fmt(updated)}</time></>}
+        {' · '}{readingTime}
+      </p>
+    </header>
+
+    {
+      cover && (
+        <Image
+          src={cover}
+          alt={coverAlt ?? ''}
+          widths={[640, 1024, 1600]}
+          sizes="(min-width: 1152px) 72rem, 100vw"
+          loading="eager"
+          fetchpriority="high"
+          class="mt-12 w-full rounded-2xl border border-border"
+        />
+      )
+    }
+
+    <div class="prose prose-lg mt-12 max-w-none min-w-0">
+      <Content />
+    </div>
+  </article>
+</BaseLayout>
